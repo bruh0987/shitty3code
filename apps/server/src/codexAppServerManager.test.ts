@@ -373,7 +373,7 @@ describe("startSession", () => {
     expect(buildCodexInitializeParams()).toEqual({
       clientInfo: {
         name: "t3code_desktop",
-        title: "T3 Code Desktop",
+        title: "shitty3code Desktop",
         version: "0.1.0",
       },
       capabilities: {
@@ -441,7 +441,7 @@ describe("startSession", () => {
       )
       .mockImplementation(() => {
         throw new Error(
-          "Codex CLI v0.36.0 is too old for T3 Code. Upgrade to v0.37.0 or newer and restart T3 Code.",
+          "Codex CLI v0.36.0 is too old for shitty3code. Upgrade to v0.37.0 or newer and restart shitty3code.",
         );
       });
 
@@ -454,7 +454,7 @@ describe("startSession", () => {
           runtimeMode: "full-access",
         }),
       ).rejects.toThrow(
-        "Codex CLI v0.36.0 is too old for T3 Code. Upgrade to v0.37.0 or newer and restart T3 Code.",
+        "Codex CLI v0.36.0 is too old for shitty3code. Upgrade to v0.37.0 or newer and restart shitty3code.",
       );
       expect(versionCheck).toHaveBeenCalledTimes(1);
       expect(events).toEqual([
@@ -462,7 +462,7 @@ describe("startSession", () => {
           method: "session/startFailed",
           kind: "error",
           message:
-            "Codex CLI v0.36.0 is too old for T3 Code. Upgrade to v0.37.0 or newer and restart T3 Code.",
+            "Codex CLI v0.36.0 is too old for shitty3code. Upgrade to v0.37.0 or newer and restart shitty3code.",
         },
       ]);
     } finally {

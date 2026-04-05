@@ -1,5 +1,5 @@
 import type {
-  ClaudeSettings,
+  GeminiSettings,
   ModelCapabilities,
   ServerProvider,
   ServerProviderModel,
@@ -9,7 +9,7 @@ import type {
 import { Cache, Duration, Effect, Equal, Layer, Option, Result, Schema, Stream } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { decodeJsonResult } from "@t3tools/shared/schemaJson";
-import { query as claudeQuery } from "@anthropic-ai/claude-agent-sdk";
+import { query as geminiQuery } from "@anthropic-ai/claude-agent-sdk";
 
 import {
   buildServerProvider,
@@ -23,15 +23,15 @@ import {
   type CommandResult,
 } from "../providerSnapshot";
 import { makeManagedServerProvider } from "../makeManagedServerProvider";
-import { ClaudeProvider } from "../Services/ClaudeProvider";
+import { GeminiProvider } from "../Services/GeminiProvider";
 import { ServerSettingsService } from "../../serverSettings";
 import { ServerSettingsError } from "@t3tools/contracts";
 
-const PROVIDER = "claudeAgent" as const;
+const PROVIDER = "gemini" as const;
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
   {
-    slug: "claude-opus-4-6",
-    name: "Claude Opus 4.6",
+    slug: "gemini-opus-4-6",
+    name: "Gemini Opus 4.6",
     isCustom: false,
     capabilities: {
       reasoningEffortLevels: [
@@ -51,8 +51,8 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
     } satisfies ModelCapabilities,
   },
   {
-    slug: "claude-sonnet-4-6",
-    name: "Claude Sonnet 4.6",
+    slug: "gemini-sonnet-4-6",
+    name: "Gemini Sonnet 4.6",
     isCustom: false,
     capabilities: {
       reasoningEffortLevels: [
@@ -71,8 +71,8 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
     } satisfies ModelCapabilities,
   },
   {
-    slug: "claude-haiku-4-5",
-    name: "Claude Haiku 4.5",
+    slug: "gemini-haiku-4-5",
+    name: "Gemini Haiku 4.5",
     isCustom: false,
     capabilities: {
       reasoningEffortLevels: [],
@@ -84,7 +84,7 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
   },
 ];
 
-export function getClaudeModelCapabilities(model: string | null | undefined): ModelCapabilities {
+export function getGeminiModelCapabilities(model: string | null | undefined): ModelCapabilities {
   const slug = model?.trim();
   return (
     BUILT_IN_MODELS.find((candidate) => candidate.slug === slug)?.capabilities ?? {
@@ -97,7 +97,7 @@ export function getClaudeModelCapabilities(model: string | null | undefined): Mo
   );
 }
 
-export function parseClaudeAuthStatusFromOutput(result: CommandResult): {
+export function parseGeminiAuthStatusFromOutput(result: CommandResult): {
   readonly status: Exclude<ServerProviderState, "disabled">;
   readonly auth: Pick<ServerProviderAuth, "status">;
   readonly message?: string;
@@ -113,7 +113,7 @@ export function parseClaudeAuthStatusFromOutput(result: CommandResult): {
       status: "warning",
       auth: { status: "unknown" },
       message:
-        "Claude Agent authentication status command is unavailable in this version of Claude.",
+        "Gemini Agent authentication status command is unavailable in this version of Gemini.",
     };
   }
 
@@ -121,13 +121,13 @@ export function parseClaudeAuthStatusFromOutput(result: CommandResult): {
     lowerOutput.includes("not logged in") ||
     lowerOutput.includes("login required") ||
     lowerOutput.includes("authentication required") ||
-    lowerOutput.includes("run `claude login`") ||
-    lowerOutput.includes("run claude login")
+    lowerOutput.includes("run `gemini login`") ||
+    lowerOutput.includes("run gemini login")
   ) {
     return {
       status: "error",
       auth: { status: "unauthenticated" },
-      message: "Claude is not authenticated. Run `claude auth login` and try again.",
+      message: "Gemini is not authenticated. Run `gemini auth login` and try again.",
     };
   }
 
@@ -153,7 +153,7 @@ export function parseClaudeAuthStatusFromOutput(result: CommandResult): {
     return {
       status: "error",
       auth: { status: "unauthenticated" },
-      message: "Claude is not authenticated. Run `claude auth login` and try again.",
+      message: "Gemini is not authenticated. Run `gemini auth login` and try again.",
     };
   }
   if (parsedAuth.attemptedJsonParse) {
@@ -161,7 +161,7 @@ export function parseClaudeAuthStatusFromOutput(result: CommandResult): {
       status: "warning",
       auth: { status: "unknown" },
       message:
-        "Could not verify Claude authentication status from JSON output (missing auth marker).",
+        "Could not verify Gemini authentication status from JSON output (missing auth marker).",
     };
   }
   if (result.code === 0) {
@@ -173,15 +173,15 @@ export function parseClaudeAuthStatusFromOutput(result: CommandResult): {
     status: "warning",
     auth: { status: "unknown" },
     message: detail
-      ? `Could not verify Claude authentication status. ${detail}`
-      : "Could not verify Claude authentication status.",
+      ? `Could not verify Gemini authentication status. ${detail}`
+      : "Could not verify Gemini authentication status.",
   };
 }
 
 // ── Subscription type detection ─────────────────────────────────────
 //
 // The SDK probe returns typed `AccountInfo.subscriptionType` directly.
-// This walker is a best-effort fallback for the `claude auth status`
+// This walker is a best-effort fallback for the `gemini auth status`
 // JSON output whose shape is not guaranteed.
 
 /** Keys that directly hold a subscription/plan identifier. */
@@ -256,7 +256,7 @@ function findAuthMethod(value: unknown): Option.Option<string> {
 }
 
 /**
- * Try to extract a subscription type from the `claude auth status` JSON
+ * Try to extract a subscription type from the `gemini auth status` JSON
  * output. This is a zero-cost operation on data we already have.
  */
 const decodeUnknownJson = decodeJsonResult(Schema.Unknown);
@@ -267,7 +267,7 @@ function extractSubscriptionTypeFromOutput(result: CommandResult): string | unde
   return Option.getOrUndefined(findSubscriptionType(parsed.success));
 }
 
-function extractClaudeAuthMethodFromOutput(result: CommandResult): string | undefined {
+function extractGeminiAuthMethodFromOutput(result: CommandResult): string | undefined {
   const parsed = decodeUnknownJson(result.stdout.trim());
   if (Result.isFailure(parsed)) return undefined;
   return Option.getOrUndefined(findAuthMethod(parsed.success));
@@ -293,7 +293,7 @@ function toTitleCaseWords(value: string): string {
     .join(" ");
 }
 
-function claudeSubscriptionLabel(subscriptionType: string | undefined): string | undefined {
+function geminiSubscriptionLabel(subscriptionType: string | undefined): string | undefined {
   const normalized = subscriptionType?.toLowerCase().replace(/[\s_-]+/g, "");
   if (!normalized) return undefined;
 
@@ -316,29 +316,29 @@ function claudeSubscriptionLabel(subscriptionType: string | undefined): string |
   }
 }
 
-function normalizeClaudeAuthMethod(authMethod: string | undefined): string | undefined {
+function normalizeGeminiAuthMethod(authMethod: string | undefined): string | undefined {
   const normalized = authMethod?.toLowerCase().replace(/[\s_-]+/g, "");
   if (!normalized) return undefined;
   if (normalized === "apikey") return "apiKey";
   return undefined;
 }
 
-function claudeAuthMetadata(input: {
+function geminiAuthMetadata(input: {
   readonly subscriptionType: string | undefined;
   readonly authMethod: string | undefined;
 }): { readonly type: string; readonly label: string } | undefined {
-  if (normalizeClaudeAuthMethod(input.authMethod) === "apiKey") {
+  if (normalizeGeminiAuthMethod(input.authMethod) === "apiKey") {
     return {
       type: "apiKey",
-      label: "Claude API Key",
+      label: "Gemini API Key",
     };
   }
 
   if (input.subscriptionType) {
-    const subscriptionLabel = claudeSubscriptionLabel(input.subscriptionType);
+    const subscriptionLabel = geminiSubscriptionLabel(input.subscriptionType);
     return {
       type: input.subscriptionType,
-      label: `Claude ${subscriptionLabel ?? toTitleCaseWords(input.subscriptionType)} Subscription`,
+      label: `Gemini ${subscriptionLabel ?? toTitleCaseWords(input.subscriptionType)} Subscription`,
     };
   }
 
@@ -385,20 +385,20 @@ export function adjustModelsForSubscription(
 const CAPABILITIES_PROBE_TIMEOUT_MS = 8_000;
 
 /**
- * Probe account information by spawning a lightweight Claude Agent SDK
+ * Probe account information by spawning a lightweight Gemini Agent SDK
  * session and reading the initialization result.
  *
  * The prompt is never sent to the Anthropic API — we abort immediately
  * after the local initialization phase completes. This gives us the
  * user's subscription type without incurring any token cost.
  *
- * This is used as a fallback when `claude auth status` does not include
+ * This is used as a fallback when `gemini auth status` does not include
  * subscription type information.
  */
-const probeClaudeCapabilities = (binaryPath: string) => {
+const probeGeminiCapabilities = (binaryPath: string) => {
   const abort = new AbortController();
   return Effect.tryPromise(async () => {
-    const q = claudeQuery({
+    const q = geminiQuery({
       prompt: ".",
       options: {
         persistSession: false,
@@ -427,32 +427,32 @@ const probeClaudeCapabilities = (binaryPath: string) => {
   );
 };
 
-const runClaudeCommand = Effect.fn("runClaudeCommand")(function* (args: ReadonlyArray<string>) {
-  const claudeSettings = yield* Effect.service(ServerSettingsService).pipe(
+const runGeminiCommand = Effect.fn("runGeminiCommand")(function* (args: ReadonlyArray<string>) {
+  const geminiSettings = yield* Effect.service(ServerSettingsService).pipe(
     Effect.flatMap((service) => service.getSettings),
-    Effect.map((settings) => settings.providers.claudeAgent),
+    Effect.map((settings) => settings.providers.gemini),
   );
-  const command = ChildProcess.make(claudeSettings.binaryPath, [...args], {
+  const command = ChildProcess.make(geminiSettings.binaryPath, [...args], {
     shell: process.platform === "win32",
   });
-  return yield* spawnAndCollect(claudeSettings.binaryPath, command);
+  return yield* spawnAndCollect(geminiSettings.binaryPath, command);
 });
 
-export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(function* (
+export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(function* (
   resolveSubscriptionType?: (binaryPath: string) => Effect.Effect<string | undefined>,
 ): Effect.fn.Return<
   ServerProvider,
   ServerSettingsError,
   ChildProcessSpawner.ChildProcessSpawner | ServerSettingsService
 > {
-  const claudeSettings = yield* Effect.service(ServerSettingsService).pipe(
+  const geminiSettings = yield* Effect.service(ServerSettingsService).pipe(
     Effect.flatMap((service) => service.getSettings),
-    Effect.map((settings) => settings.providers.claudeAgent),
+    Effect.map((settings) => settings.providers.gemini),
   );
   const checkedAt = new Date().toISOString();
-  const models = providerModelsFromSettings(BUILT_IN_MODELS, PROVIDER, claudeSettings.customModels);
+  const models = providerModelsFromSettings(BUILT_IN_MODELS, PROVIDER, geminiSettings.customModels);
 
-  if (!claudeSettings.enabled) {
+  if (!geminiSettings.enabled) {
     return buildServerProvider({
       provider: PROVIDER,
       enabled: false,
@@ -463,12 +463,12 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         version: null,
         status: "warning",
         auth: { status: "unknown" },
-        message: "Claude is disabled in shitty3code settings.",
+        message: "Gemini is disabled in shitty3code settings.",
       },
     });
   }
 
-  const versionProbe = yield* runClaudeCommand(["--version"]).pipe(
+  const versionProbe = yield* runGeminiCommand(["--version"]).pipe(
     Effect.timeoutOption(DEFAULT_TIMEOUT_MS),
     Effect.result,
   );
@@ -477,7 +477,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
     const error = versionProbe.failure;
     return buildServerProvider({
       provider: PROVIDER,
-      enabled: claudeSettings.enabled,
+      enabled: geminiSettings.enabled,
       checkedAt,
       models,
       probe: {
@@ -486,8 +486,8 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         status: "error",
         auth: { status: "unknown" },
         message: isCommandMissingCause(error)
-          ? "Claude Agent CLI (`claude`) is not installed or not on PATH."
-          : `Failed to execute Claude Agent CLI health check: ${error instanceof Error ? error.message : String(error)}.`,
+          ? "Gemini Agent CLI (`gemini`) is not installed or not on PATH."
+          : `Failed to execute Gemini Agent CLI health check: ${error instanceof Error ? error.message : String(error)}.`,
       },
     });
   }
@@ -495,7 +495,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
   if (Option.isNone(versionProbe.success)) {
     return buildServerProvider({
       provider: PROVIDER,
-      enabled: claudeSettings.enabled,
+      enabled: geminiSettings.enabled,
       checkedAt,
       models,
       probe: {
@@ -504,7 +504,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         status: "error",
         auth: { status: "unknown" },
         message:
-          "Claude Agent CLI is installed but failed to run. Timed out while running command.",
+          "Gemini Agent CLI is installed but failed to run. Timed out while running command.",
       },
     });
   }
@@ -515,7 +515,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
     const detail = detailFromResult(version);
     return buildServerProvider({
       provider: PROVIDER,
-      enabled: claudeSettings.enabled,
+      enabled: geminiSettings.enabled,
       checkedAt,
       models,
       probe: {
@@ -524,22 +524,22 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         status: "error",
         auth: { status: "unknown" },
         message: detail
-          ? `Claude Agent CLI is installed but failed to run. ${detail}`
-          : "Claude Agent CLI is installed but failed to run.",
+          ? `Gemini Agent CLI is installed but failed to run. ${detail}`
+          : "Gemini Agent CLI is installed but failed to run.",
       },
     });
   }
 
   // ── Auth check + subscription detection ────────────────────────────
 
-  const authProbe = yield* runClaudeCommand(["auth", "status"]).pipe(
+  const authProbe = yield* runGeminiCommand(["auth", "status"]).pipe(
     Effect.timeoutOption(DEFAULT_TIMEOUT_MS),
     Effect.result,
   );
 
   // Determine subscription type from multiple sources (cheapest first):
-  // 1. `claude auth status` JSON output (may or may not contain it)
-  // 2. Cached SDK probe (spawns a Claude process on miss, reads
+  // 1. `gemini auth status` JSON output (may or may not contain it)
+  // 2. Cached SDK probe (spawns a Gemini process on miss, reads
   //    `initializationResult()` for account metadata, then aborts
   //    immediately — no API tokens are consumed)
 
@@ -548,11 +548,11 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
 
   if (Result.isSuccess(authProbe) && Option.isSome(authProbe.success)) {
     subscriptionType = extractSubscriptionTypeFromOutput(authProbe.success.value);
-    authMethod = extractClaudeAuthMethodFromOutput(authProbe.success.value);
+    authMethod = extractGeminiAuthMethodFromOutput(authProbe.success.value);
   }
 
   if (!subscriptionType && resolveSubscriptionType) {
-    subscriptionType = yield* resolveSubscriptionType(claudeSettings.binaryPath);
+    subscriptionType = yield* resolveSubscriptionType(geminiSettings.binaryPath);
   }
 
   const resolvedModels = adjustModelsForSubscription(models, subscriptionType);
@@ -563,7 +563,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
     const error = authProbe.failure;
     return buildServerProvider({
       provider: PROVIDER,
-      enabled: claudeSettings.enabled,
+      enabled: geminiSettings.enabled,
       checkedAt,
       models: resolvedModels,
       probe: {
@@ -573,8 +573,8 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         auth: { status: "unknown" },
         message:
           error instanceof Error
-            ? `Could not verify Claude authentication status: ${error.message}.`
-            : "Could not verify Claude authentication status.",
+            ? `Could not verify Gemini authentication status: ${error.message}.`
+            : "Could not verify Gemini authentication status.",
       },
     });
   }
@@ -582,7 +582,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
   if (Option.isNone(authProbe.success)) {
     return buildServerProvider({
       provider: PROVIDER,
-      enabled: claudeSettings.enabled,
+      enabled: geminiSettings.enabled,
       checkedAt,
       models: resolvedModels,
       probe: {
@@ -590,16 +590,16 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         version: parsedVersion,
         status: "warning",
         auth: { status: "unknown" },
-        message: "Could not verify Claude authentication status. Timed out while running command.",
+        message: "Could not verify Gemini authentication status. Timed out while running command.",
       },
     });
   }
 
-  const parsed = parseClaudeAuthStatusFromOutput(authProbe.success.value);
-  const authMetadata = claudeAuthMetadata({ subscriptionType, authMethod });
+  const parsed = parseGeminiAuthStatusFromOutput(authProbe.success.value);
+  const authMetadata = geminiAuthMetadata({ subscriptionType, authMethod });
   return buildServerProvider({
     provider: PROVIDER,
-    enabled: claudeSettings.enabled,
+    enabled: geminiSettings.enabled,
     checkedAt,
     models: resolvedModels,
     probe: {
@@ -615,8 +615,8 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
   });
 });
 
-export const ClaudeProviderLive = Layer.effect(
-  ClaudeProvider,
+export const GeminiProviderLive = Layer.effect(
+  GeminiProvider,
   Effect.gen(function* () {
     const serverSettings = yield* ServerSettingsService;
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
@@ -625,23 +625,23 @@ export const ClaudeProviderLive = Layer.effect(
       capacity: 1,
       timeToLive: Duration.minutes(5),
       lookup: (binaryPath: string) =>
-        probeClaudeCapabilities(binaryPath).pipe(Effect.map((r) => r?.subscriptionType)),
+        probeGeminiCapabilities(binaryPath).pipe(Effect.map((r) => r?.subscriptionType)),
     });
 
-    const checkProvider = checkClaudeProviderStatus((binaryPath) =>
+    const checkProvider = checkGeminiProviderStatus((binaryPath) =>
       Cache.get(subscriptionProbeCache, binaryPath),
     ).pipe(
       Effect.provideService(ServerSettingsService, serverSettings),
       Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
     );
 
-    return yield* makeManagedServerProvider<ClaudeSettings>({
+    return yield* makeManagedServerProvider<GeminiSettings>({
       getSettings: serverSettings.getSettings.pipe(
-        Effect.map((settings) => settings.providers.claudeAgent),
+        Effect.map((settings) => settings.providers.gemini),
         Effect.orDie,
       ),
       streamSettings: serverSettings.streamChanges.pipe(
-        Stream.map((settings) => settings.providers.claudeAgent),
+        Stream.map((settings) => settings.providers.gemini),
       ),
       haveSettingsChanged: (previous, next) => !Equal.equals(previous, next),
       checkProvider,

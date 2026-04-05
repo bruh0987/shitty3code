@@ -30,17 +30,17 @@ function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): o
   return option.available;
 }
 
-const PROVIDER_ICON_BY_PROVIDER: Record<ProviderPickerKind, Icon> = {
+const PROVIDER_ICON_BY_PROVIDER: Record<ProviderPickerKind | "gemini", Icon> = {
   codex: OpenAI,
   claudeAgent: ClaudeAI,
   cursor: CursorIcon,
+  gemini: Gemini,
 };
 
 export const AVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter(isAvailableProviderOption);
 const UNAVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter((option) => !option.available);
 const COMING_SOON_PROVIDER_OPTIONS = [
   { id: "opencode", label: "OpenCode", icon: OpenCodeIcon },
-  { id: "gemini", label: "Gemini", icon: Gemini },
 ] as const;
 
 function providerIconClassName(
@@ -68,7 +68,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   const selectedProviderOptions = props.modelOptionsByProvider[activeProvider];
   const selectedModelLabel =
     selectedProviderOptions.find((option) => option.slug === props.model)?.name ?? props.model;
-  const ProviderIcon = PROVIDER_ICON_BY_PROVIDER[activeProvider];
+  const ProviderIcon = PROVIDER_ICON_BY_PROVIDER[activeProvider] || Gemini;
   const handleModelChange = (provider: ProviderKind, value: string) => {
     if (props.disabled) return;
     if (!value) return;
@@ -147,7 +147,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
         ) : (
           <>
             {AVAILABLE_PROVIDER_OPTIONS.map((option) => {
-              const OptionIcon = PROVIDER_ICON_BY_PROVIDER[option.value];
+              const OptionIcon = PROVIDER_ICON_BY_PROVIDER[option.value as ProviderPickerKind] || Gemini;
               const liveProvider = props.providers
                 ? getProviderSnapshot(props.providers, option.value)
                 : undefined;
@@ -208,7 +208,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
             })}
             {UNAVAILABLE_PROVIDER_OPTIONS.length > 0 && <MenuDivider />}
             {UNAVAILABLE_PROVIDER_OPTIONS.map((option) => {
-              const OptionIcon = PROVIDER_ICON_BY_PROVIDER[option.value];
+              const OptionIcon = PROVIDER_ICON_BY_PROVIDER[option.value as ProviderPickerKind] || Gemini;
               return (
                 <MenuItem key={option.value} disabled>
                   <OptionIcon

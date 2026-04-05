@@ -145,7 +145,7 @@ export function buildLegacyServerSettingsMigrationPatch(legacySettings: Record<s
   }
 
   if (Schema.is(ModelSelection)(legacySettings.textGenerationModelSelection)) {
-    patch.textGenerationModelSelection = legacySettings.textGenerationModelSelection;
+    patch.textGenerationModelSelection = legacySettings.textGenerationModelSelection as any;
   }
 
   if (typeof legacySettings.codexBinaryPath === "string") {
