@@ -36,7 +36,7 @@ type ProviderRegistryEntry = {
     threadId: ThreadId;
     model: string;
     models: ReadonlyArray<ServerProviderModel>;
-    modelOptions: ProviderModelOptions[ProviderKind] | undefined;
+    modelOptions: any;
     prompt: string;
     onPromptChange: (prompt: string) => void;
   }) => ReactNode;
@@ -44,7 +44,7 @@ type ProviderRegistryEntry = {
     threadId: ThreadId;
     model: string;
     models: ReadonlyArray<ServerProviderModel>;
-    modelOptions: ProviderModelOptions[ProviderKind] | undefined;
+    modelOptions: any;
     prompt: string;
     onPromptChange: (prompt: string) => void;
   }) => ReactNode;
@@ -155,6 +155,11 @@ const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
       />
     ),
   },
+  geminiAgent: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: () => <></>,
+    renderTraitsPicker: () => <></>,
+  },
 };
 
 export function getComposerProviderState(input: ComposerProviderStateInput): ComposerProviderState {
@@ -166,7 +171,7 @@ export function renderProviderTraitsMenuContent(input: {
   threadId: ThreadId;
   model: string;
   models: ReadonlyArray<ServerProviderModel>;
-  modelOptions: ProviderModelOptions[ProviderKind] | undefined;
+  modelOptions: any;
   prompt: string;
   onPromptChange: (prompt: string) => void;
 }): ReactNode {
@@ -185,7 +190,7 @@ export function renderProviderTraitsPicker(input: {
   threadId: ThreadId;
   model: string;
   models: ReadonlyArray<ServerProviderModel>;
-  modelOptions: ProviderModelOptions[ProviderKind] | undefined;
+  modelOptions: any;
   prompt: string;
   onPromptChange: (prompt: string) => void;
 }): ReactNode {

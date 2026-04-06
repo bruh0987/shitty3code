@@ -1421,7 +1421,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
       AVAILABLE_PROVIDER_OPTIONS.filter(
         (option) => lockedProvider === null || option.value === lockedProvider,
       ).flatMap((option) =>
-        modelOptionsByProvider[option.value].map(({ slug, name }) => ({
+        (modelOptionsByProvider[option.value] ?? []).map(({ slug, name }) => ({
           provider: option.value,
           providerLabel: option.label,
           slug,

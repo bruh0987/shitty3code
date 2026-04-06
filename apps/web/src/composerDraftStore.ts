@@ -496,7 +496,7 @@ function normalizeProviderModelOptions(
         }
       : undefined;
 
-  const geminiApprovalMode: GeminiApprovalMode | undefined =
+  const geminiApprovalMode: any =
     geminiCandidate?.approvalMode === "default" ||
     geminiCandidate?.approvalMode === "auto_edit" ||
     geminiCandidate?.approvalMode === "yolo" ||
@@ -548,7 +548,7 @@ function normalizeModelSelection(
     provider,
     model,
     ...(options ? { options } : {}),
-  };
+  } as ModelSelection;
 }
 
 // ── Legacy sync helpers (used only during migration from v2 storage) ──
@@ -1701,10 +1701,10 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
                 provider,
                 model: current?.model ?? DEFAULT_MODEL_BY_PROVIDER[provider],
                 options: opts,
-              };
+              } as ModelSelection;
             } else if (current?.options) {
               // Remove options but keep the selection
-              const { options: _, ...rest } = current;
+              const { options: _, ...rest } = current as any;
               nextMap[provider] = rest as ModelSelection;
             }
           }
@@ -1751,9 +1751,9 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
               provider: normalizedProvider,
               model: currentForProvider?.model ?? DEFAULT_MODEL_BY_PROVIDER[normalizedProvider],
               options: providerOpts,
-            };
+            } as ModelSelection;
           } else if (currentForProvider?.options) {
-            const { options: _, ...rest } = currentForProvider;
+            const { options: _, ...rest } = currentForProvider as any;
             nextMap[normalizedProvider] = rest as ModelSelection;
           }
 
@@ -1774,9 +1774,9 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
                 ...stickyBase,
                 provider: normalizedProvider,
                 options: providerOpts,
-              };
-            } else if (stickyBase.options) {
-              const { options: _, ...rest } = stickyBase;
+              } as ModelSelection;
+            } else if ((stickyBase as any).options) {
+              const { options: _, ...rest } = stickyBase as any;
               nextStickyMap[normalizedProvider] = rest as ModelSelection;
             }
             nextStickyActiveProvider = base.activeProvider ?? normalizedProvider;

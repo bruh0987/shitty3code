@@ -45,6 +45,13 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     placeholder: "your-claude-model-slug",
     example: "claude-sonnet-5-0",
   },
+  geminiAgent: {
+    provider: "geminiAgent",
+    title: "Gemini",
+    description: "Save additional Gemini model slugs for the picker and `/model` command.",
+    placeholder: "your-gemini-model-slug",
+    example: "gemini-4-flash",
+  },
 };
 
 export const MODEL_PROVIDER_SETTINGS = Object.values(PROVIDER_CUSTOM_MODEL_CONFIG);
@@ -151,7 +158,7 @@ export function getCustomModelOptionsByProvider(
   providers: ReadonlyArray<ServerProvider>,
   selectedProvider?: ProviderKind | null,
   selectedModel?: string | null,
-): Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>> {
+): Record<ProviderKind | "cursor", ReadonlyArray<{ slug: string; name: string }>> {
   return {
     codex: getAppModelOptions(
       settings,
@@ -165,6 +172,13 @@ export function getCustomModelOptionsByProvider(
       "claudeAgent",
       selectedProvider === "claudeAgent" ? selectedModel : undefined,
     ),
+    geminiAgent: getAppModelOptions(
+      settings,
+      providers,
+      "geminiAgent",
+      selectedProvider === "geminiAgent" ? selectedModel : undefined,
+    ),
+    cursor: [],
   };
 }
 
@@ -189,12 +203,12 @@ export function resolveAppModelSelectionState(
     prompt: "",
     modelOptions: {
       [provider]: provider === selection.provider ? selection.options : undefined,
-    },
+    } as any,
   });
 
   return {
     provider,
     model,
-    ...(modelOptionsForDispatch ? { options: modelOptionsForDispatch } : {}),
-  };
+    ...(modelOptionsForDispatch ? { options: modelOptionsForDispatch as any } : {}),
+  } as any;
 }

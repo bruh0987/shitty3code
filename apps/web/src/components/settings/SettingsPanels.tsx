@@ -537,12 +537,18 @@ export function GeneralSettingsPanel() {
         DEFAULT_UNIFIED_SETTINGS.providers.claudeAgent.binaryPath ||
       settings.providers.claudeAgent.customModels.length > 0,
     ),
+    geminiAgent: Boolean(
+      settings.providers.geminiAgent.binaryPath !==
+        DEFAULT_UNIFIED_SETTINGS.providers.geminiAgent.binaryPath ||
+      settings.providers.geminiAgent.customModels.length > 0,
+    ),
   });
   const [customModelInputByProvider, setCustomModelInputByProvider] = useState<
     Record<ProviderKind, string>
   >({
     codex: "",
     claudeAgent: "",
+    geminiAgent: "",
   });
   const [customModelErrorByProvider, setCustomModelErrorByProvider] = useState<
     Partial<Record<ProviderKind, string | null>>
@@ -1057,7 +1063,7 @@ export function GeneralSettingsPanel() {
                         textGenerationModelSelection: {
                           provider: textGenProvider,
                           model: textGenModel,
-                          ...(nextOptions ? { options: nextOptions } : {}),
+                          ...(nextOptions ? { options: nextOptions as any } : {}),
                         },
                       },
                       serverProviders,
